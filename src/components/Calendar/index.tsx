@@ -565,8 +565,8 @@ const CalendarContainer = ({ schedule, auth }: CalendarContainerProps) => {
           ref={calendarRef}
           locale={auth.language}
           plugins={getPlugins()}
-          contentHeight={680}
-          height={680}
+          contentHeight="auto"
+          height="auto"
           aspectRatio={1.6}
           stickyHeaderDates={true}
           handleWindowResize={true}
@@ -579,7 +579,7 @@ const CalendarContainer = ({ schedule, auth }: CalendarContainerProps) => {
           events={events}
           firstDay={1}
           dayMaxEventRows={8}
-          fixedWeekCount={true}
+          fixedWeekCount={false}
           showNonCurrentDates={true}
           eventContent={(eventInfo: any) => (
             <RenderEventContent eventInfo={eventInfo} />

@@ -1,3 +1,10 @@
+html, body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+}
+
 .profile-calendar-container {
   display: flex;
   flex-direction: column;
@@ -10,7 +17,7 @@
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   transition: all 0.3s ease;
   box-sizing: border-box;
-  overflow: visible;
+  overflow-y: auto;
 }
 
 .profile-section {
@@ -57,7 +64,8 @@
   flex: 1;
   display: flex;
   flex-direction: column;
-  overflow: visible;
+  overflow-y: visible;
+  margin-bottom: 20px;
   
   &:hover {
     box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
@@ -65,7 +73,6 @@
 }
 
 .calendar-wrapper {
-  min-height: 600px;
   height: auto;
   display: flex;
   flex-direction: column;
@@ -434,6 +441,8 @@
   gap: 10px;
   justify-content: center;
   margin-bottom: 5px;
+  max-height: none;
+  overflow-y: visible;
 
   .staff {
     min-height: 30px;
@@ -827,22 +836,44 @@
   .profile-calendar-container {
     padding: 15px;
     gap: 15px;
+    overflow-y: auto;
   }
   
   .profile-section,
   .calendar-section {
     padding: 15px;
+    margin-bottom: 15px;
   }
   
   .staff-list {
-    justify-content: center;
+    justify-content: flex-start;
     margin-bottom: 15px;
-    padding-bottom: 15px;
+    padding-bottom: 10px;
+    gap: 8px;
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    width: 100%;
+    padding: 5px;
+    
+    .staff {
+      padding: 5px 10px;
+      font-size: 11px;
+      white-space: nowrap;
+      
+      svg {
+        width: 14px;
+        height: 14px;
+      }
+    }
   }
   
   .fc .fc-toolbar {
     flex-direction: column;
     gap: 10px;
+  }
+  
+  .calendar-wrapper {
+    overflow-x: auto;
   }
 }
 
@@ -853,7 +884,6 @@
   overflow: visible;
   
   .fc-view-harness {
-    min-height: 550px !important;
     height: auto !important;
     overflow: visible !important;
   }
@@ -999,4 +1029,45 @@
   display: flex;
   justify-content: center;
   width: 100%;
+}
+
+// Additional responsive settings for FullCalendar
+@media (max-width: 768px) {
+  // ... existing code ...
+  
+  .fc {
+    width: 100%;
+    
+    .fc-header-toolbar {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 1.5em !important;
+      
+      .fc-toolbar-chunk {
+        display: flex;
+        justify-content: center;
+        width: 100%;
+      }
+    }
+    
+    .fc-daygrid-event {
+      font-size: 11px;
+    }
+    
+    .fc-daygrid-day-frame {
+      min-height: 60px;
+    }
+  }
+  
+  .event-content {
+    p {
+      font-size: 11px;
+    }
+    
+    .event-time {
+      font-size: 9px;
+    }
+  }
 }
