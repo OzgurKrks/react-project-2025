@@ -1157,3 +1157,127 @@ html, body {
 [title] {
   cursor: pointer;
 }
+
+// Balloon tooltip styles
+.balloon-tooltip {
+  position: fixed;
+  z-index: 9999;
+  pointer-events: auto;
+  animation: tooltipFadeIn 0.2s ease-in-out;
+  max-width: 300px;
+  width: auto;
+  user-select: none;
+  cursor: pointer;
+}
+
+.tooltip-content {
+  background-color: white;
+  color: #333;
+  font-size: 12px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  text-align: left;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+  min-width: 180px;
+  transition: all 0.2s ease;
+
+  &:hover {
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.25);
+  }
+  
+  div {
+    margin: 4px 0;
+    white-space: nowrap;
+    
+    strong {
+      font-weight: 600;
+      margin-right: 5px;
+      color: #2a86db;
+    }
+  }
+  
+  .tooltip-header {
+    font-weight: 600;
+    margin-bottom: 6px;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 4px;
+  }
+  
+  .pair-staff-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: 5px 0;
+    
+    .pair-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      display: inline-block;
+      flex-shrink: 0;
+    }
+  }
+}
+
+.tooltip-arrow {
+  position: absolute;
+  bottom: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 8px solid transparent;
+  border-right: 8px solid transparent;
+  border-top: 8px solid white;
+  filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.1));
+}
+
+.pair-tooltip {
+  .tooltip-content {
+    min-width: 160px;
+  }
+}
+
+@keyframes tooltipFadeIn {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-95%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(-100%);
+  }
+}
+
+// Mobile adjustments for the tooltips
+@media (max-width: 768px) {
+  .balloon-tooltip {
+    .tooltip-content {
+      font-size: 11px;
+      padding: 6px 10px;
+      min-width: 150px;
+      
+      .tooltip-header {
+        margin-bottom: 4px;
+        padding-bottom: 3px;
+      }
+      
+      .pair-staff-item {
+        gap: 4px;
+        margin: 3px 0;
+        
+        .pair-dot {
+          width: 6px;
+          height: 6px;
+        }
+      }
+    }
+    
+    .tooltip-arrow {
+      border-left: 6px solid transparent;
+      border-right: 6px solid transparent;
+      border-top: 6px solid white;
+      bottom: -6px;
+    }
+  }
+}

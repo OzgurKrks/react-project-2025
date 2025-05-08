@@ -89,10 +89,42 @@ const CalendarContainer = ({ schedule, auth }: CalendarContainerProps) => {
   const [selectedEvent, setSelectedEvent] = useState<any>(null);
   const [showEventModal, setShowEventModal] = useState(false);
   const [calendarKey, setCalendarKey] = useState(0);
+  const [activeTooltip, setActiveTooltip] = useState<string | null>(null);
+  const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
 
   // Confirm modal için state'ler
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [pendingEventDrop, setPendingEventDrop] = useState<any>(null);
+
+  const calendarSectionRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (activeTooltip && calendarSectionRef.current) {
+        const distanceX = Math.abs(e.clientX - tooltipPosition.x);
+        const distanceY = Math.abs(e.clientY - tooltipPosition.y);
+
+        if (distanceX > 100 || distanceY > 100) {
+          setActiveTooltip(null);
+        }
+      }
+    };
+
+    // Add click handler to close tooltips when clicking elsewhere
+    const handleClick = () => {
+      if (activeTooltip) {
+        setActiveTooltip(null);
+      }
+    };
+
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("click", handleClick);
+
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("click", handleClick);
+    };
+  }, [activeTooltip, tooltipPosition]);
 
   const getFirstEventDate = () => {
     if (schedule?.assignments?.length > 0) {
@@ -286,10 +318,23 @@ const CalendarContainer = ({ schedule, auth }: CalendarContainerProps) => {
     const staffName = eventInfo.event.extendedProps.staff?.name || "";
     const shiftName = eventInfo.event.title || "";
     const startTime = eventInfo.event.extendedProps.startTime || "";
-    const endTime = eventInfo.event.extendedProps.endTime || "";
+    const eventId = eventInfo.event.id;
 
-    // Create tooltip content with clear formatting
-    const tooltipContent = `Personel: ${staffName}\nVardiya: ${shiftName}\nBaşlangıç: ${startTime}\nBitiş: ${endTime}`;
+    const handleMouseEnter = (e: React.MouseEvent) => {
+      const rect = e.currentTarget.getBoundingClientRect();
+
+      setTooltipPosition({
+        x: window.scrollX + rect.left + rect.width / 2,
+        y: window.scrollY + rect.top,
+      });
+      setActiveTooltip(`event-${eventId}`);
+    };
+
+    const handleMouseLeave = () => {
+      setTimeout(() => {
+        setActiveTooltip(null);
+      }, 100);
+    };
 
     return (
       <div
@@ -298,7 +343,8 @@ const CalendarContainer = ({ schedule, auth }: CalendarContainerProps) => {
           setSelectedEvent(eventInfo.event);
           setShowEventModal(true);
         }}
-        title={tooltipContent}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
       >
         <div className="event-header">
           <i className="event-time">{startTime}</i>
@@ -354,21 +400,17 @@ const CalendarContainer = ({ schedule, auth }: CalendarContainerProps) => {
   };
 
   useEffect(() => {
-    // LocalStorage'dan kaydedilmiş değişiklikleri ve seçili personeli yükle
     const loadSavedChanges = () => {
       try {
-        // Kaydedilmiş değişiklikleri yükle
         const savedChanges = localStorage.getItem("calendarChanges");
         if (savedChanges) {
           const changes = JSON.parse(savedChanges);
 
-          // Değişiklikleri Redux store'a gönder
           changes.forEach((change: any) => {
             dispatch(updateAssignment({ assignment: change }) as any);
           });
         }
 
-        // Kaydedilmiş seçili personeli yükle
         const savedSelectedStaffIds = localStorage.getItem("selectedStaffIds");
         if (savedSelectedStaffIds) {
           const parsedIds = JSON.parse(savedSelectedStaffIds);
@@ -380,34 +422,29 @@ const CalendarContainer = ({ schedule, auth }: CalendarContainerProps) => {
             validIds.length > 0 ? validIds : [schedule?.staffs?.[0]?.id]
           );
         } else {
-          // If no saved selection, default to first staff
           setSelectedStaffIds(
             schedule?.staffs?.[0]?.id ? [schedule?.staffs?.[0]?.id] : []
           );
         }
       } catch (error) {
         console.error("Kaydedilmiş bilgileri yükleme hatası:", error);
-        // Default to first staff on error
+
         setSelectedStaffIds(
           schedule?.staffs?.[0]?.id ? [schedule?.staffs?.[0]?.id] : []
         );
       }
     };
 
-    // Sayfa ilk yüklendiğinde değişiklikleri ve seçili personeli yükle
     if (schedule?.assignments?.length > 0) {
       loadSavedChanges();
     } else {
-      // Schedule yüklenmediyse en azından ilk personeli seç
       setSelectedStaffIds(
         schedule?.staffs?.[0]?.id ? [schedule?.staffs?.[0]?.id] : []
       );
     }
-  }, [schedule?.scheduleId]); // Schedule ID değiştiğinde çalıştır
+  }, [schedule?.scheduleId]);
 
-  // Etkinliğin sürüklenmesi tamamlandığında çalışacak fonksiyon
   const handleEventDrop = (info: any) => {
-    // Sürüklenme işlemini beklet ve onay modalını göster
     setPendingEventDrop(info);
     setShowConfirmModal(true);
   };
@@ -460,30 +497,24 @@ const CalendarContainer = ({ schedule, auth }: CalendarContainerProps) => {
       console.log("Etkinlik taşındı:", updatedAssignment);
     }
 
-    // Modal'ı kapat
     setShowConfirmModal(false);
     setPendingEventDrop(null);
   };
 
-  // Onay modalında "Hayır" tıklandığında
   const cancelEventDrop = () => {
     // Sürükleme işlemini geri al
     if (pendingEventDrop) {
       pendingEventDrop.revert();
     }
 
-    // Modal'ı kapat
     setShowConfirmModal(false);
     setPendingEventDrop(null);
 
-    // Bildirim göster
     toast.info("İşlem iptal edildi");
   };
 
-  // Değişiklikleri localStorage'a kaydet
   const saveChangesToLocalStorage = (updatedAssignment: any) => {
     try {
-      // Önceki değişiklikleri al
       const savedChangesStr = localStorage.getItem("calendarChanges") || "[]";
       const savedChanges = JSON.parse(savedChangesStr);
 
@@ -493,14 +524,11 @@ const CalendarContainer = ({ schedule, auth }: CalendarContainerProps) => {
       );
 
       if (existingIndex >= 0) {
-        // Varsa güncelle
         savedChanges[existingIndex] = updatedAssignment;
       } else {
-        // Yoksa ekle
         savedChanges.push(updatedAssignment);
       }
 
-      // LocalStorage'a kaydet
       localStorage.setItem("calendarChanges", JSON.stringify(savedChanges));
     } catch (error) {
       console.error("Değişiklikleri kaydetme hatası:", error);
@@ -533,20 +561,16 @@ const CalendarContainer = ({ schedule, auth }: CalendarContainerProps) => {
     );
   };
 
-  // Simplified staff selection handler for toggling
   const handleStaffSelection = (staffId: string) => {
     let newSelectedStaffIds;
 
     if (selectedStaffIds.includes(staffId)) {
-      // If already selected and not the only selected item, remove it
       if (selectedStaffIds.length > 1) {
         newSelectedStaffIds = selectedStaffIds.filter((id) => id !== staffId);
       } else {
-        // Keep at least one selected
         return;
       }
     } else {
-      // Add to selection
       newSelectedStaffIds = [...selectedStaffIds, staffId];
     }
 
@@ -563,8 +587,96 @@ const CalendarContainer = ({ schedule, auth }: CalendarContainerProps) => {
       )
     : schedule?.staffs;
 
+  const renderDayCellContent = ({ date }: { date: Date }) => {
+    const found = validDates().includes(dayjs(date).format("YYYY-MM-DD"));
+    const isHighlighted = highlightedDates.includes(
+      dayjs(date).format("DD-MM-YYYY")
+    );
+
+    // Bu tarihte çalışan diğer personelleri bul
+    const pairsForThisDate = pairDates.filter(
+      (p) => p.date === dayjs(date).format("DD-MM-YYYY")
+    );
+
+    // Pair sınıfları
+    let pairClasses = "";
+
+    // Her pair için renk ekle (en fazla 3 personelin rengi gösterilsin)
+    if (pairsForThisDate.length > 0) {
+      // Renkleri tekillestir
+      const uniquePairs = pairsForThisDate.reduce<
+        {
+          date: string;
+          color: string;
+          staffId: string;
+          staffName: string;
+        }[]
+      >((acc, current) => {
+        const x = acc.find((item) => item.staffId === current.staffId);
+        if (!x) {
+          return acc.concat([current]);
+        } else {
+          return acc;
+        }
+      }, []);
+
+      // İlk 3 personelin rengini göster
+      const displayPairs = uniquePairs.slice(0, 3);
+
+      displayPairs.forEach((pair, index) => {
+        pairClasses += ` pair-${index + 1} ${pair.color}`;
+      });
+    }
+
+    const handlePairIndicatorMouseEnter = (
+      e: React.MouseEvent,
+      date: string
+    ) => {
+      const rect = e.currentTarget.getBoundingClientRect();
+      // Position at center-top of the pair indicator
+      setTooltipPosition({
+        x: window.scrollX + rect.left + rect.width / 2,
+        y: window.scrollY + rect.top,
+      });
+      setActiveTooltip(`pair-${date}`);
+    };
+
+    const handlePairIndicatorMouseLeave = () => {
+      setTimeout(() => {
+        setActiveTooltip(null);
+      }, 100);
+    };
+
+    return (
+      <div
+        className={`day-cell ${found ? "" : "date-range-disabled"} ${
+          isHighlighted ? "highlighted-date-orange" : ""
+        } ${pairClasses}`}
+      >
+        {dayjs(date).date()}
+
+        {/* Pair belirteçleri */}
+        {pairsForThisDate.length > 0 && (
+          <div className="pair-indicators">
+            {pairsForThisDate.slice(0, 3).map((pair, index) => (
+              <span
+                key={index}
+                className={`pair-indicator ${pair.color}`}
+                title={pair.staffName}
+                onMouseEnter={(e) =>
+                  handlePairIndicatorMouseEnter(e, pair.date)
+                }
+                onMouseLeave={handlePairIndicatorMouseLeave}
+              ></span>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  };
+
   return (
-    <div className="calendar-section">
+    <div className="calendar-section" ref={calendarSectionRef}>
       <div className="calendar-header">
         <div className="staff-filter-container">
           <div className="search-container">
@@ -632,80 +744,103 @@ const CalendarContainer = ({ schedule, auth }: CalendarContainerProps) => {
             }
           }}
           datesSet={() => {}}
-          dayCellContent={({ date }) => {
-            const found = validDates().includes(
-              dayjs(date).format("YYYY-MM-DD")
-            );
-            const isHighlighted = highlightedDates.includes(
-              dayjs(date).format("DD-MM-YYYY")
-            );
-
-            // Bu tarihte çalışan diğer personelleri bul
-            const pairsForThisDate = pairDates.filter(
-              (p) => p.date === dayjs(date).format("DD-MM-YYYY")
-            );
-
-            // Pair sınıfları
-            let pairClasses = "";
-
-            // Her pair için renk ekle (en fazla 3 personelin rengi gösterilsin)
-            if (pairsForThisDate.length > 0) {
-              // Renkleri tekillestir
-              const uniquePairs = pairsForThisDate.reduce<
-                {
-                  date: string;
-                  color: string;
-                  staffId: string;
-                  staffName: string;
-                }[]
-              >((acc, current) => {
-                const x = acc.find((item) => item.staffId === current.staffId);
-                if (!x) {
-                  return acc.concat([current]);
-                } else {
-                  return acc;
-                }
-              }, []);
-
-              // İlk 3 personelin rengini göster
-              const displayPairs = uniquePairs.slice(0, 3);
-
-              displayPairs.forEach((pair, index) => {
-                pairClasses += ` pair-${index + 1} ${pair.color}`;
-              });
-            }
-
-            return (
-              <div
-                className={`day-cell ${found ? "" : "date-range-disabled"} ${
-                  isHighlighted ? "highlighted-date-orange" : ""
-                } ${pairClasses}`}
-                title={pairsForThisDate.map((p) => p.staffName).join(", ")}
-              >
-                {dayjs(date).date()}
-
-                {/* Pair belirteçleri */}
-                {pairsForThisDate.length > 0 && (
-                  <div className="pair-indicators">
-                    {pairsForThisDate.slice(0, 3).map((pair, index) => (
-                      <span
-                        key={index}
-                        className={`pair-indicator ${pair.color}`}
-                        title={pair.staffName}
-                      ></span>
-                    ))}
-                  </div>
-                )}
-              </div>
-            );
-          }}
-          // Sürükleme işlemi tamamlandığında
+          dayCellContent={renderDayCellContent}
           eventDrop={handleEventDrop}
         />
       </div>
       <EventModal />
       <ConfirmModal />
       <ToastContainer position="top-right" autoClose={3000} />
+
+      {/* Event Tooltip Component */}
+      {activeTooltip && activeTooltip.startsWith("event-") && (
+        <div
+          className="balloon-tooltip"
+          style={{
+            position: "fixed",
+            left: tooltipPosition.x,
+            top: tooltipPosition.y - 10,
+            transform: "translateX(-50%) translateY(-100%)",
+            zIndex: 9999,
+          }}
+          onClick={(e) => {
+            e.stopPropagation();
+            setActiveTooltip(null);
+          }}
+        >
+          <div className="tooltip-content">
+            {(() => {
+              const eventId = activeTooltip.replace("event-", "");
+              const eventData = events.find((e) => e.id === eventId);
+              if (eventData) {
+                return (
+                  <>
+                    <div>
+                      <strong>Personel:</strong>{" "}
+                      {eventData.extendedProps?.staff?.name}
+                    </div>
+                    <div>
+                      <strong>Vardiya:</strong> {eventData.title}
+                    </div>
+                    <div>
+                      <strong>Başlangıç:</strong>{" "}
+                      {eventData.extendedProps?.startTime}
+                    </div>
+                    <div>
+                      <strong>Bitiş:</strong> {eventData.extendedProps?.endTime}
+                    </div>
+                  </>
+                );
+              }
+              return null;
+            })()}
+          </div>
+          <div className="tooltip-arrow"></div>
+        </div>
+      )}
+
+      {/* Pair Indicator Tooltip Component */}
+      {activeTooltip && activeTooltip.startsWith("pair-") && (
+        <div
+          className="balloon-tooltip pair-tooltip"
+          style={{
+            position: "fixed",
+            left: tooltipPosition.x,
+            top: tooltipPosition.y - 10,
+            transform: "translateX(-50%) translateY(-100%)",
+            zIndex: 9999,
+          }}
+          onClick={(e) => {
+            e.stopPropagation();
+            setActiveTooltip(null);
+          }}
+        >
+          <div className="tooltip-content">
+            {(() => {
+              const date = activeTooltip.replace("pair-", "");
+              const pairsForDate = pairDates.filter((p) => p.date === date);
+
+              if (pairsForDate.length > 0) {
+                return (
+                  <>
+                    <div className="tooltip-header">
+                      Aynı gün çalışan personeller:
+                    </div>
+                    {pairsForDate.map((pair, idx) => (
+                      <div key={idx} className="pair-staff-item">
+                        <span className={`pair-dot ${pair.color}`}></span>
+                        <span>{pair.staffName}</span>
+                      </div>
+                    ))}
+                  </>
+                );
+              }
+              return null;
+            })()}
+          </div>
+          <div className="tooltip-arrow"></div>
+        </div>
+      )}
     </div>
   );
 };
