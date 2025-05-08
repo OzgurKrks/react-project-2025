@@ -76,6 +76,9 @@ const CalendarContainer = ({ schedule, auth }: CalendarContainerProps) => {
 
   const [events, setEvents] = useState<EventInput[]>([]);
   const [highlightedDates, setHighlightedDates] = useState<string[]>([]);
+  const [pairDates, setPairDates] = useState<
+    { date: string; color: string; staffId: string; staffName: string }[]
+  >([]);
   const [selectedStaffId, setSelectedStaffId] = useState<string | null>(null);
   const [selectedEvent, setSelectedEvent] = useState<any>(null);
   const [showEventModal, setShowEventModal] = useState(false);
@@ -102,6 +105,12 @@ const CalendarContainer = ({ schedule, auth }: CalendarContainerProps) => {
       setCalendarKey((prev) => prev + 1);
       initialLoadRef.current = false;
     }
+
+    const selectedStaff = schedule?.staffs?.find(
+      (staff) => staff.id === schedule?.staffs?.[0]?.id
+    );
+    console.log("Seçili personel:", selectedStaff);
+    console.log("PairList yapısı:", selectedStaff?.pairList);
 
     setSelectedStaffId(schedule?.staffs?.[0]?.id);
     generateStaffBasedCalendar();
@@ -203,10 +212,56 @@ const CalendarContainer = ({ schedule, auth }: CalendarContainerProps) => {
     const offDays = schedule?.staffs?.find(
       (staff) => staff.id === selectedStaffId
     )?.offDays;
+
+    const pairDatesList: {
+      date: string;
+      color: string;
+      staffId: string;
+      staffName: string;
+    }[] = [];
+
+    if (selectedStaffId) {
+      const selectedStaffDates = schedule?.assignments
+        ?.filter((assignment) => assignment.staffId === selectedStaffId)
+        ?.map((assignment) => {
+          return dayjs.utc(assignment.shiftStart).format("YYYY-MM-DD");
+        });
+
+      console.log("Seçili personel vardiya tarihleri:", selectedStaffDates);
+
+      schedule?.staffs?.forEach((staff, staffIndex) => {
+        if (staff.id === selectedStaffId) return;
+
+        const staffAssignments = schedule?.assignments?.filter(
+          (assignment) => assignment.staffId === staff.id
+        );
+
+        staffAssignments?.forEach((assignment) => {
+          const assignmentDate = dayjs
+            .utc(assignment.shiftStart)
+            .format("YYYY-MM-DD");
+
+          if (selectedStaffDates?.includes(assignmentDate)) {
+            const color = classes[staffIndex % classes.length];
+
+            pairDatesList.push({
+              date: dayjs(assignmentDate).format("DD-MM-YYYY"),
+              color: color,
+              staffId: staff.id,
+              staffName: staff.name,
+            });
+          }
+        });
+      });
+
+      console.log("Hesaplanan pair günleri:", pairDatesList);
+    }
+
     const dates = getDatesBetween(
       dayjs(schedule.scheduleStartDate).format("DD.MM.YYYY"),
       dayjs(schedule.scheduleEndDate).format("DD.MM.YYYY")
     );
+
     let highlightedDates: string[] = [];
 
     dates.forEach((date) => {
@@ -215,6 +270,7 @@ const CalendarContainer = ({ schedule, auth }: CalendarContainerProps) => {
     });
 
     setHighlightedDates(highlightedDates);
+    setPairDates(pairDatesList);
     setEvents(works);
   };
 
@@ -357,13 +413,62 @@ const CalendarContainer = ({ schedule, auth }: CalendarContainerProps) => {
               dayjs(date).format("DD-MM-YYYY")
             );
 
+            // Bu tarihte çalışan diğer personelleri bul
+            const pairsForThisDate = pairDates.filter(
+              (p) => p.date === dayjs(date).format("DD-MM-YYYY")
+            );
+
+            // Pair sınıfları
+            let pairClasses = "";
+
+            // Her pair için renk ekle (en fazla 3 personelin rengi gösterilsin)
+            if (pairsForThisDate.length > 0) {
+              // Renkleri tekillestir
+              const uniquePairs = pairsForThisDate.reduce<
+                {
+                  date: string;
+                  color: string;
+                  staffId: string;
+                  staffName: string;
+                }[]
+              >((acc, current) => {
+                const x = acc.find((item) => item.staffId === current.staffId);
+                if (!x) {
+                  return acc.concat([current]);
+                } else {
+                  return acc;
+                }
+              }, []);
+
+              // İlk 3 personelin rengini göster
+              const displayPairs = uniquePairs.slice(0, 3);
+
+              displayPairs.forEach((pair, index) => {
+                pairClasses += ` pair-${index + 1} ${pair.color}`;
+              });
+            }
+
             return (
               <div
-                className={`${found ? "" : "date-range-disabled"} ${
+                className={`day-cell ${found ? "" : "date-range-disabled"} ${
                   isHighlighted ? "highlighted-date-orange" : ""
-                } highlightedPair`}
+                } ${pairClasses}`}
+                title={pairsForThisDate.map((p) => p.staffName).join(", ")}
               >
                 {dayjs(date).date()}
+
+                {/* Pair belirteçleri */}
+                {pairsForThisDate.length > 0 && (
+                  <div className="pair-indicators">
+                    {pairsForThisDate.slice(0, 3).map((pair, index) => (
+                      <span
+                        key={index}
+                        className={`pair-indicator ${pair.color}`}
+                        title={pair.staffName}
+                      ></span>
+                    ))}
+                  </div>
+                )}
               </div>
             );
           }}
