@@ -591,30 +591,7 @@ const CalendarContainer = ({ schedule, auth }: CalendarContainerProps) => {
               initialLoadRef.current = false;
             }
           }}
-          datesSet={(info: any) => {
-            const prevButton = document.querySelector(
-              ".fc-prev-button"
-            ) as HTMLButtonElement;
-            const nextButton = document.querySelector(
-              ".fc-next-button"
-            ) as HTMLButtonElement;
-
-            const startDiff = dayjs(info.start)
-              .utc()
-              .diff(
-                dayjs(schedule.scheduleStartDate).subtract(1, "day").utc(),
-                "days"
-              );
-            const endDiff = dayjs(dayjs(schedule.scheduleEndDate)).diff(
-              info.end,
-              "days"
-            );
-            if (startDiff < 0 && startDiff > -35) prevButton.disabled = true;
-            else prevButton.disabled = false;
-
-            if (endDiff < 0 && endDiff > -32) nextButton.disabled = true;
-            else nextButton.disabled = false;
-          }}
+          datesSet={() => {}}
           dayCellContent={({ date }) => {
             const found = validDates().includes(
               dayjs(date).format("YYYY-MM-DD")
