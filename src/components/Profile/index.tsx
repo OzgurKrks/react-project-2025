@@ -7,8 +7,27 @@ type ProfileCardProps = {
 };
 
 const ProfileCard = ({ profile }: ProfileCardProps) => {
-  // Role bilgisini localStorage'dan al
-  const role = AuthSession.getRoles();
+  // Get role information from localStorage
+  const storedRole = AuthSession.getRoles();
+  const storedRoleStr = String(storedRole || "");
+
+  // Parse the stored role JSON if it exists
+  let parsedRole = null;
+  try {
+    if (storedRoleStr && storedRoleStr.charAt(0) === "{") {
+      parsedRole = JSON.parse(storedRoleStr);
+    }
+  } catch (e) {
+    console.error("Failed to parse role data from localStorage", e);
+  }
+
+  // Get role name from parsed JSON or from profile or fallback
+  const roleName =
+    profile?.roles?.name ||
+    parsedRole?.name ||
+    (storedRoleStr === "1" ? "Admin" : storedRoleStr) ||
+    "Yükleniyor...";
+
   const email = profile?.email ?? AuthSession.getEmail();
 
   return (
@@ -30,22 +49,8 @@ const ProfileCard = ({ profile }: ProfileCardProps) => {
           <i className="profile-icon email-icon">✉️</i> {email}
         </p>
         <p className="profile-role">
-          <i className="profile-icon role-icon">👤</i> {role || "Yükleniyor..."}
+          <i className="profile-icon role-icon">👤</i> {roleName}
         </p>
-        <div className="profile-stats">
-          <div className="profile-stat">
-            <span className="stat-value">{profile?.schedulesCount || 0}</span>
-            <span className="stat-label">Çizelge</span>
-          </div>
-          <div className="profile-stat">
-            <span className="stat-value">{profile?.assignmentsCount || 0}</span>
-            <span className="stat-label">Görev</span>
-          </div>
-          <div className="profile-stat">
-            <span className="stat-value">{profile?.shiftsCount || 0}</span>
-            <span className="stat-label">Vardiya</span>
-          </div>
-        </div>
       </div>
     </div>
   );
