@@ -84,7 +84,8 @@ const CalendarContainer = ({ schedule, auth }: CalendarContainerProps) => {
   const [pairDates, setPairDates] = useState<
     { date: string; color: string; staffId: string; staffName: string }[]
   >([]);
-  const [selectedStaffId, setSelectedStaffId] = useState<string | null>(null);
+  const [selectedStaffIds, setSelectedStaffIds] = useState<string[]>([]);
+  const [searchTerm, setSearchTerm] = useState<string>("");
   const [selectedEvent, setSelectedEvent] = useState<any>(null);
   const [showEventModal, setShowEventModal] = useState(false);
   const [calendarKey, setCalendarKey] = useState(0);
@@ -114,12 +115,6 @@ const CalendarContainer = ({ schedule, auth }: CalendarContainerProps) => {
       setCalendarKey((prev) => prev + 1);
       initialLoadRef.current = false;
     }
-
-    const selectedStaff = schedule?.staffs?.find(
-      (staff) => staff.id === schedule?.staffs?.[0]?.id
-    );
-    console.log("Seçili personel:", selectedStaff);
-    console.log("PairList yapısı:", selectedStaff?.pairList);
 
     generateStaffBasedCalendar();
   }, [schedule]);
@@ -176,8 +171,8 @@ const CalendarContainer = ({ schedule, auth }: CalendarContainerProps) => {
 
     for (let i = 0; i < schedule?.assignments?.length; i++) {
       if (
-        selectedStaffId &&
-        schedule?.assignments?.[i]?.staffId !== selectedStaffId
+        selectedStaffIds.length > 0 &&
+        !selectedStaffIds.includes(schedule?.assignments?.[i]?.staffId)
       ) {
         continue;
       }
@@ -217,8 +212,8 @@ const CalendarContainer = ({ schedule, auth }: CalendarContainerProps) => {
       works.push(work);
     }
 
-    const offDays = schedule?.staffs?.find(
-      (staff) => staff.id === selectedStaffId
+    const offDays = schedule?.staffs?.find((staff) =>
+      selectedStaffIds.length === 1 ? staff.id === selectedStaffIds[0] : false
     )?.offDays;
 
     const pairDatesList: {
@@ -228,7 +223,8 @@ const CalendarContainer = ({ schedule, auth }: CalendarContainerProps) => {
       staffName: string;
     }[] = [];
 
-    if (selectedStaffId) {
+    if (selectedStaffIds.length === 1) {
+      const selectedStaffId = selectedStaffIds[0];
       const selectedStaffDates = schedule?.assignments
         ?.filter((assignment) => assignment.staffId === selectedStaffId)
         ?.map((assignment) => {
@@ -284,9 +280,17 @@ const CalendarContainer = ({ schedule, auth }: CalendarContainerProps) => {
 
   useEffect(() => {
     generateStaffBasedCalendar();
-  }, [selectedStaffId]);
+  }, [selectedStaffIds]);
 
   const RenderEventContent = ({ eventInfo }: any) => {
+    const staffName = eventInfo.event.extendedProps.staff?.name || "";
+    const shiftName = eventInfo.event.title || "";
+    const startTime = eventInfo.event.extendedProps.startTime || "";
+    const endTime = eventInfo.event.extendedProps.endTime || "";
+
+    // Create tooltip content with clear formatting
+    const tooltipContent = `Personel: ${staffName}\nVardiya: ${shiftName}\nBaşlangıç: ${startTime}\nBitiş: ${endTime}`;
+
     return (
       <div
         className="event-content"
@@ -294,13 +298,15 @@ const CalendarContainer = ({ schedule, auth }: CalendarContainerProps) => {
           setSelectedEvent(eventInfo.event);
           setShowEventModal(true);
         }}
+        title={tooltipContent}
       >
-        <p>
-          <i className="event-time">
-            {eventInfo.event.extendedProps.startTime}
-          </i>{" "}
-          {eventInfo.event.title}
-        </p>
+        <div className="event-header">
+          <i className="event-time">{startTime}</i>
+        </div>
+        <div className="event-info">
+          <span className="event-staff-name">{staffName}</span>
+          <span className="event-shift-name">{shiftName}</span>
+        </div>
       </div>
     );
   };
@@ -363,28 +369,28 @@ const CalendarContainer = ({ schedule, auth }: CalendarContainerProps) => {
         }
 
         // Kaydedilmiş seçili personeli yükle
-        const savedStaffId = localStorage.getItem("selectedStaffId");
-        if (savedStaffId) {
-          // Personel ID'si geçerliyse (schedule içinde varsa) yükle
-          const staffExists = schedule?.staffs?.some(
-            (staff) => staff.id === savedStaffId
+        const savedSelectedStaffIds = localStorage.getItem("selectedStaffIds");
+        if (savedSelectedStaffIds) {
+          const parsedIds = JSON.parse(savedSelectedStaffIds);
+          // Filter out any invalid IDs
+          const validIds = parsedIds.filter((id: string) =>
+            schedule?.staffs?.some((staff) => staff.id === id)
           );
-          if (staffExists) {
-            setSelectedStaffId(savedStaffId);
-          } else {
-            // Eğer kaydedilmiş personel artık mevcut değilse, ilk personeli seç
-            setSelectedStaffId(schedule?.staffs?.[0]?.id);
-            // Geçersiz personel ID'sini localStorage'dan temizle
-            localStorage.removeItem("selectedStaffId");
-          }
+          setSelectedStaffIds(
+            validIds.length > 0 ? validIds : [schedule?.staffs?.[0]?.id]
+          );
         } else {
-          // Kaydedilmiş personel yoksa, ilk personeli seç
-          setSelectedStaffId(schedule?.staffs?.[0]?.id);
+          // If no saved selection, default to first staff
+          setSelectedStaffIds(
+            schedule?.staffs?.[0]?.id ? [schedule?.staffs?.[0]?.id] : []
+          );
         }
       } catch (error) {
         console.error("Kaydedilmiş bilgileri yükleme hatası:", error);
-        // Hata durumunda ilk personeli seç
-        setSelectedStaffId(schedule?.staffs?.[0]?.id);
+        // Default to first staff on error
+        setSelectedStaffIds(
+          schedule?.staffs?.[0]?.id ? [schedule?.staffs?.[0]?.id] : []
+        );
       }
     };
 
@@ -393,7 +399,9 @@ const CalendarContainer = ({ schedule, auth }: CalendarContainerProps) => {
       loadSavedChanges();
     } else {
       // Schedule yüklenmediyse en azından ilk personeli seç
-      setSelectedStaffId(schedule?.staffs?.[0]?.id);
+      setSelectedStaffIds(
+        schedule?.staffs?.[0]?.id ? [schedule?.staffs?.[0]?.id] : []
+      );
     }
   }, [schedule?.scheduleId]); // Schedule ID değiştiğinde çalıştır
 
@@ -525,25 +533,57 @@ const CalendarContainer = ({ schedule, auth }: CalendarContainerProps) => {
     );
   };
 
-  // Personel seçildiğinde çalışacak fonksiyon
+  // Simplified staff selection handler for toggling
   const handleStaffSelection = (staffId: string) => {
-    // Seçili personeli state'e kaydet
-    setSelectedStaffId(staffId);
+    let newSelectedStaffIds;
 
-    // Seçili personeli localStorage'a kaydet
-    localStorage.setItem("selectedStaffId", staffId);
+    if (selectedStaffIds.includes(staffId)) {
+      // If already selected and not the only selected item, remove it
+      if (selectedStaffIds.length > 1) {
+        newSelectedStaffIds = selectedStaffIds.filter((id) => id !== staffId);
+      } else {
+        // Keep at least one selected
+        return;
+      }
+    } else {
+      // Add to selection
+      newSelectedStaffIds = [...selectedStaffIds, staffId];
+    }
+
+    setSelectedStaffIds(newSelectedStaffIds);
+    localStorage.setItem(
+      "selectedStaffIds",
+      JSON.stringify(newSelectedStaffIds)
+    );
   };
+
+  const filteredStaff = searchTerm
+    ? schedule?.staffs?.filter((staff) =>
+        staff.name.toLowerCase().includes(searchTerm.toLowerCase())
+      )
+    : schedule?.staffs;
 
   return (
     <div className="calendar-section">
       <div className="calendar-header">
+        <div className="staff-filter-container">
+          <div className="search-container">
+            <input
+              type="text"
+              placeholder="Personel ara..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="staff-search-input"
+            />
+          </div>
+        </div>
         <div className="staff-list">
-          {schedule?.staffs?.map((staff: any) => (
+          {filteredStaff?.map((staff: any) => (
             <div
               key={staff.id}
               onClick={() => handleStaffSelection(staff.id)}
               className={`staff ${
-                staff.id === selectedStaffId ? "active" : ""
+                selectedStaffIds.includes(staff.id) ? "active" : ""
               }`}
             >
               <svg

@@ -443,17 +443,18 @@ html, body {
   margin-bottom: 5px;
   max-height: none;
   overflow-y: visible;
+  width: 100%;
 
   .staff {
-    min-height: 30px;
-    padding: 6px 12px;
+    min-height: 28px;
+    padding: 5px 10px;
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
     background: #f8f9fa;
     color: #555;
     border: 1px solid #e9ecef;
-    border-radius: 50px;
+    border-radius: 6px;
     text-transform: capitalize;
     transition: all 0.3s;
     cursor: pointer;
@@ -624,24 +625,31 @@ html, body {
 
 .event-content {
   cursor: pointer;
-  padding: 5px;
+  padding: 4px 5px;
   border-radius: 4px;
-  transition: background-color 0.2s;
+  transition: all 0.2s;
   font-weight: 500;
   font-size: 13px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  position: relative;
 
   &:hover {
     background-color: rgba(255, 255, 255, 0.2);
+    transform: translateY(-1px);
   }
   
-  p {
-    margin: 0;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+  .event-header {
     display: flex;
-    align-items: center;
-    gap: 5px;
+    justify-content: flex-start;
+  }
+  
+  .event-info {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    overflow: hidden;
   }
   
   .event-time {
@@ -652,6 +660,23 @@ html, body {
     background: rgba(255, 255, 255, 0.2);
     padding: 1px 4px;
     border-radius: 3px;
+    align-self: flex-start;
+  }
+  
+  .event-staff-name {
+    font-weight: 600;
+    text-transform: capitalize;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 12px;
+  }
+  
+  .event-shift-name {
+    font-weight: 400;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    overflow: hidden;
   }
 }
 
@@ -875,6 +900,64 @@ html, body {
   .calendar-wrapper {
     overflow-x: auto;
   }
+  
+  .staff-filter-container {
+    padding: 0 5px;
+  }
+  
+  .staff-selection-actions {
+    justify-content: space-between;
+    width: 100%;
+    
+    button {
+      padding: 5px 10px;
+      font-size: 12px;
+    }
+  }
+  
+  .fc {
+    width: 100%;
+    
+    .fc-header-toolbar {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 1.5em !important;
+      
+      .fc-toolbar-chunk {
+        display: flex;
+        justify-content: center;
+        width: 100%;
+      }
+    }
+    
+    .fc-daygrid-event {
+      font-size: 11px;
+    }
+    
+    .fc-daygrid-day-frame {
+      min-height: 60px;
+    }
+  }
+  
+  .event-content {
+    padding: 3px 4px;
+    gap: 1px;
+    
+    .event-time {
+      font-size: 9px;
+      padding: 1px 3px;
+    }
+    
+    .event-staff-name {
+      font-size: 10px;
+    }
+    
+    .event-shift-name {
+      font-size: 9px;
+    }
+  }
 }
 
 // FullCalendar stil güncellemeleri
@@ -1025,49 +1108,52 @@ html, body {
 
 // Takvim başlığı
 .calendar-header {
-  margin-bottom: 10px;
+  margin-bottom: 15px;
   display: flex;
-  justify-content: center;
+  flex-direction: column;
+  align-items: center;
   width: 100%;
 }
 
-// Additional responsive settings for FullCalendar
-@media (max-width: 768px) {
-  // ... existing code ...
+.staff-filter-container {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 10px;
+  gap: 10px;
+}
+
+.search-container {
+  display: flex;
+  width: 100%;
+  max-width: 300px;
+  margin: 0 auto 8px;
+}
+
+.staff-search-input {
+  flex: 1;
+  padding: 6px 12px;
+  border: 1px solid #e0e0e0;
+  border-radius: 20px;
+  font-size: 13px;
+  outline: none;
+  transition: all 0.2s;
   
-  .fc {
-    width: 100%;
-    
-    .fc-header-toolbar {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 10px;
-      margin-bottom: 1.5em !important;
-      
-      .fc-toolbar-chunk {
-        display: flex;
-        justify-content: center;
-        width: 100%;
-      }
-    }
-    
-    .fc-daygrid-event {
-      font-size: 11px;
-    }
-    
-    .fc-daygrid-day-frame {
-      min-height: 60px;
-    }
+  &:focus {
+    border-color: #2a86db;
+    box-shadow: 0 0 0 3px rgba(42, 134, 219, 0.15);
   }
   
-  .event-content {
-    p {
-      font-size: 11px;
-    }
-    
-    .event-time {
-      font-size: 9px;
-    }
+  &::placeholder {
+    color: #aaa;
   }
+}
+
+.staff-selection-actions {
+  display: none;
+}
+
+// Remove all custom tooltip styling sections and just keep basic tooltip styling
+[title] {
+  cursor: pointer;
 }
