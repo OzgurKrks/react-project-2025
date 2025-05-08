@@ -12,12 +12,14 @@ export interface ScheduleState {
   errors: ErrorBE;
   loading: boolean;
   schedule: ScheduleInstance;
+  updateLoading: boolean;
 }
 
 const initialState: ScheduleState = {
   loading: false,
   errors: {},
   schedule: {} as ScheduleInstance,
+  updateLoading: false,
 };
 
 const scheduleReducer: any = {
@@ -37,6 +39,42 @@ const scheduleReducer: any = {
   ): ScheduleState => ({
     ...state,
     loading: false,
+    errors: payload,
+  }),
+  
+  [types.UPDATE_ASSIGNMENT]: (
+    state: ScheduleState
+  ): ScheduleState => ({
+    ...state,
+    updateLoading: true,
+  }),
+
+  [types.UPDATE_ASSIGNMENT_SUCCESS]: (
+    state: ScheduleState,
+    { payload }: Action<any>
+  ): ScheduleState => {
+    // Güncellenmiş görevlendirmeyi bul ve değiştir
+    const updatedAssignments = state.schedule.assignments.map(
+      assignment => (assignment.id === payload.id ? payload : assignment)
+    );
+
+    return {
+      ...state,
+      updateLoading: false,
+      errors: {},
+      schedule: {
+        ...state.schedule,
+        assignments: updatedAssignments
+      },
+    };
+  },
+
+  [types.UPDATE_ASSIGNMENT_FAILED]: (
+    state: ScheduleState,
+    { payload }: Action<typeof state.errors>
+  ): ScheduleState => ({
+    ...state,
+    updateLoading: false,
     errors: payload,
   }),
 };

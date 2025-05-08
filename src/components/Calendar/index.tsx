@@ -19,6 +19,10 @@ import "../profileCalendar.scss";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 import isSameOrBefore from "dayjs/plugin/isSameOrBefore";
+import { useDispatch } from "react-redux";
+import { updateAssignment } from "../../store/schedule/actions";
+import { toast, ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 dayjs.extend(utc);
 dayjs.extend(isSameOrBefore);
@@ -73,6 +77,7 @@ const classes = [
 
 const CalendarContainer = ({ schedule, auth }: CalendarContainerProps) => {
   const calendarRef = useRef<FullCalendar>(null);
+  const dispatch = useDispatch();
 
   const [events, setEvents] = useState<EventInput[]>([]);
   const [highlightedDates, setHighlightedDates] = useState<string[]>([]);
@@ -83,6 +88,10 @@ const CalendarContainer = ({ schedule, auth }: CalendarContainerProps) => {
   const [selectedEvent, setSelectedEvent] = useState<any>(null);
   const [showEventModal, setShowEventModal] = useState(false);
   const [calendarKey, setCalendarKey] = useState(0);
+
+  // Confirm modal için state'ler
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [pendingEventDrop, setPendingEventDrop] = useState<any>(null);
 
   const getFirstEventDate = () => {
     if (schedule?.assignments?.length > 0) {
@@ -112,7 +121,6 @@ const CalendarContainer = ({ schedule, auth }: CalendarContainerProps) => {
     console.log("Seçili personel:", selectedStaff);
     console.log("PairList yapısı:", selectedStaff?.pairList);
 
-    setSelectedStaffId(schedule?.staffs?.[0]?.id);
     generateStaffBasedCalendar();
   }, [schedule]);
 
@@ -329,6 +337,193 @@ const CalendarContainer = ({ schedule, auth }: CalendarContainerProps) => {
     );
   };
 
+  useEffect(() => {
+    // LocalStorage'dan kaydedilmiş değişiklikleri ve seçili personeli yükle
+    const loadSavedChanges = () => {
+      try {
+        // Kaydedilmiş değişiklikleri yükle
+        const savedChanges = localStorage.getItem("calendarChanges");
+        if (savedChanges) {
+          const changes = JSON.parse(savedChanges);
+
+          // Değişiklikleri Redux store'a gönder
+          changes.forEach((change: any) => {
+            dispatch(updateAssignment({ assignment: change }) as any);
+          });
+        }
+
+        // Kaydedilmiş seçili personeli yükle
+        const savedStaffId = localStorage.getItem("selectedStaffId");
+        if (savedStaffId) {
+          // Personel ID'si geçerliyse (schedule içinde varsa) yükle
+          const staffExists = schedule?.staffs?.some(
+            (staff) => staff.id === savedStaffId
+          );
+          if (staffExists) {
+            setSelectedStaffId(savedStaffId);
+          } else {
+            // Eğer kaydedilmiş personel artık mevcut değilse, ilk personeli seç
+            setSelectedStaffId(schedule?.staffs?.[0]?.id);
+            // Geçersiz personel ID'sini localStorage'dan temizle
+            localStorage.removeItem("selectedStaffId");
+          }
+        } else {
+          // Kaydedilmiş personel yoksa, ilk personeli seç
+          setSelectedStaffId(schedule?.staffs?.[0]?.id);
+        }
+      } catch (error) {
+        console.error("Kaydedilmiş bilgileri yükleme hatası:", error);
+        // Hata durumunda ilk personeli seç
+        setSelectedStaffId(schedule?.staffs?.[0]?.id);
+      }
+    };
+
+    // Sayfa ilk yüklendiğinde değişiklikleri ve seçili personeli yükle
+    if (schedule?.assignments?.length > 0) {
+      loadSavedChanges();
+    } else {
+      // Schedule yüklenmediyse en azından ilk personeli seç
+      setSelectedStaffId(schedule?.staffs?.[0]?.id);
+    }
+  }, [schedule?.scheduleId]); // Schedule ID değiştiğinde çalıştır
+
+  // Etkinliğin sürüklenmesi tamamlandığında çalışacak fonksiyon
+  const handleEventDrop = (info: any) => {
+    // Sürüklenme işlemini beklet ve onay modalını göster
+    setPendingEventDrop(info);
+    setShowConfirmModal(true);
+  };
+
+  // Onay modalında "Evet" tıklandığında
+  const confirmEventDrop = () => {
+    if (!pendingEventDrop) return;
+
+    const { event } = pendingEventDrop;
+
+    // Etkinliğin yeni tarihi
+    const newDate = dayjs(event.start).format("YYYY-MM-DD");
+
+    // Etkinliğin ID'si ile schedule verisinden assignment'ı bul
+    const assignmentId = event.id;
+    const assignment = schedule.assignments.find((a) => a.id === assignmentId);
+
+    if (assignment) {
+      // Yeni başlangıç ve bitiş saatleri hesapla
+      const originalStart = dayjs.utc(assignment.shiftStart);
+      const originalEnd = dayjs.utc(assignment.shiftEnd);
+
+      // Sadece tarihi değiştir, saati koru
+      const newStartDate = dayjs(newDate).format("YYYY-MM-DD");
+      const newStartTime = originalStart.format("HH:mm:ss");
+      const newStart = `${newStartDate}T${newStartTime}Z`;
+
+      // Bitiş saati için de benzer hesaplama
+      const newEndDate = dayjs(newDate).format("YYYY-MM-DD");
+      const newEndTime = originalEnd.format("HH:mm:ss");
+      const newEnd = `${newEndDate}T${newEndTime}Z`;
+
+      // Güncellenmiş assignment objesi
+      const updatedAssignment = {
+        ...assignment,
+        shiftStart: newStart,
+        shiftEnd: newEnd,
+        isUpdated: true,
+      };
+
+      // Redux action gönder
+      dispatch(updateAssignment({ assignment: updatedAssignment }) as any);
+
+      // Değişikliği localStorage'a kaydet
+      saveChangesToLocalStorage(updatedAssignment);
+
+      // Bildirim göster
+      toast.success("Etkinlik başarıyla taşındı");
+
+      console.log("Etkinlik taşındı:", updatedAssignment);
+    }
+
+    // Modal'ı kapat
+    setShowConfirmModal(false);
+    setPendingEventDrop(null);
+  };
+
+  // Onay modalında "Hayır" tıklandığında
+  const cancelEventDrop = () => {
+    // Sürükleme işlemini geri al
+    if (pendingEventDrop) {
+      pendingEventDrop.revert();
+    }
+
+    // Modal'ı kapat
+    setShowConfirmModal(false);
+    setPendingEventDrop(null);
+
+    // Bildirim göster
+    toast.info("İşlem iptal edildi");
+  };
+
+  // Değişiklikleri localStorage'a kaydet
+  const saveChangesToLocalStorage = (updatedAssignment: any) => {
+    try {
+      // Önceki değişiklikleri al
+      const savedChangesStr = localStorage.getItem("calendarChanges") || "[]";
+      const savedChanges = JSON.parse(savedChangesStr);
+
+      // Bu assignment daha önce değiştirilmiş mi kontrol et
+      const existingIndex = savedChanges.findIndex(
+        (change: any) => change.id === updatedAssignment.id
+      );
+
+      if (existingIndex >= 0) {
+        // Varsa güncelle
+        savedChanges[existingIndex] = updatedAssignment;
+      } else {
+        // Yoksa ekle
+        savedChanges.push(updatedAssignment);
+      }
+
+      // LocalStorage'a kaydet
+      localStorage.setItem("calendarChanges", JSON.stringify(savedChanges));
+    } catch (error) {
+      console.error("Değişiklikleri kaydetme hatası:", error);
+    }
+  };
+
+  // Confirm Modal Bileşeni
+  const ConfirmModal = () => {
+    if (!showConfirmModal) return null;
+
+    return (
+      <div className="confirm-modal-overlay">
+        <div className="confirm-modal">
+          <div className="confirm-modal-header">
+            <h3>Değişikliği Onaylıyor musunuz?</h3>
+          </div>
+          <div className="confirm-modal-body">
+            <p>Bu etkinliği taşımak istediğinize emin misiniz?</p>
+          </div>
+          <div className="confirm-modal-footer">
+            <button className="confirm-yes-btn" onClick={confirmEventDrop}>
+              Evet
+            </button>
+            <button className="confirm-no-btn" onClick={cancelEventDrop}>
+              Hayır
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // Personel seçildiğinde çalışacak fonksiyon
+  const handleStaffSelection = (staffId: string) => {
+    // Seçili personeli state'e kaydet
+    setSelectedStaffId(staffId);
+
+    // Seçili personeli localStorage'a kaydet
+    localStorage.setItem("selectedStaffId", staffId);
+  };
+
   return (
     <div className="calendar-section">
       <div className="calendar-wrapper">
@@ -336,7 +531,7 @@ const CalendarContainer = ({ schedule, auth }: CalendarContainerProps) => {
           {schedule?.staffs?.map((staff: any) => (
             <div
               key={staff.id}
-              onClick={() => setSelectedStaffId(staff.id)}
+              onClick={() => handleStaffSelection(staff.id)}
               className={`staff ${
                 staff.id === selectedStaffId ? "active" : ""
               }`}
@@ -472,9 +667,13 @@ const CalendarContainer = ({ schedule, auth }: CalendarContainerProps) => {
               </div>
             );
           }}
+          // Sürükleme işlemi tamamlandığında
+          eventDrop={handleEventDrop}
         />
       </div>
       <EventModal />
+      <ConfirmModal />
+      <ToastContainer position="top-right" autoClose={3000} />
     </div>
   );
 };

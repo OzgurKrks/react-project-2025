@@ -33,8 +33,41 @@ function* asyncFetchSchedule({
   }
 }
 
+function* asyncUpdateAssignment({
+  payload,
+}: Action<{
+  assignment: any;
+  onSuccess?: (response: any) => void;
+  onError?: (error: any) => void;
+}>) {
+  yield put(updateProgress());
+  try {
+   
+    
+    const { assignment, onSuccess, onError } = payload || { assignment: null };
+    
+    if (!assignment) {
+      throw new Error('Assignment is required');
+    }
+    
+    // API çağrısı yapmadan başarılı varsayıyoruz
+    yield put(actions.updateAssignmentSuccess(assignment));
+
+    onSuccess && onSuccess(assignment);
+  } catch (err) {
+    Logger.error(err);
+    const { onError } = payload || {};
+    onError && onError(err);
+
+    yield put(actions.updateAssignmentFailed());
+  } finally {
+    yield put(updateProgress(false));
+  }
+}
+
 const scheduleSagas = [
   takeEvery(types.FETCH_SCHEDULE, asyncFetchSchedule),
+  takeEvery(types.UPDATE_ASSIGNMENT, asyncUpdateAssignment),
 ];
 
 export default scheduleSagas;
