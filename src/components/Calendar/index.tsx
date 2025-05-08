@@ -77,9 +77,35 @@ const CalendarContainer = ({ schedule, auth }: CalendarContainerProps) => {
   const [events, setEvents] = useState<EventInput[]>([]);
   const [highlightedDates, setHighlightedDates] = useState<string[]>([]);
   const [selectedStaffId, setSelectedStaffId] = useState<string | null>(null);
-  const [initialDate, setInitialDate] = useState<Date>(
-    dayjs(schedule?.scheduleStartDate).toDate()
-  );
+  const [selectedEvent, setSelectedEvent] = useState<any>(null);
+  const [showEventModal, setShowEventModal] = useState(false);
+  const [calendarKey, setCalendarKey] = useState(0);
+
+  const getFirstEventDate = () => {
+    if (schedule?.assignments?.length > 0) {
+      const sortedAssignments = [...schedule.assignments].sort((a, b) => {
+        const dateA = dayjs.utc(a.shiftStart);
+        const dateB = dayjs.utc(b.shiftStart);
+        return dateA.valueOf() - dateB.valueOf();
+      });
+
+      const firstAssignment = sortedAssignments[0];
+      return dayjs.utc(firstAssignment.shiftStart).toDate();
+    }
+    return new Date();
+  };
+
+  const initialLoadRef = useRef(true);
+
+  useEffect(() => {
+    if (schedule?.assignments?.length > 0) {
+      setCalendarKey((prev) => prev + 1);
+      initialLoadRef.current = false;
+    }
+
+    setSelectedStaffId(schedule?.staffs?.[0]?.id);
+    generateStaffBasedCalendar();
+  }, [schedule]);
 
   const getPlugins = () => {
     const plugins = [dayGridPlugin];
@@ -153,6 +179,16 @@ const CalendarContainer = ({ schedule, auth }: CalendarContainerProps) => {
             ? "highlight"
             : ""
         } ${!isValidDate ? "invalid-date" : ""}`,
+        extendedProps: {
+          staff: getStaffById(schedule?.assignments?.[i]?.staffId),
+          shift: getShiftById(schedule?.assignments?.[i]?.shiftId),
+          startTime: dayjs
+            .utc(schedule?.assignments?.[i]?.shiftStart)
+            .format("HH:mm"),
+          endTime: dayjs
+            .utc(schedule?.assignments?.[i]?.shiftEnd)
+            .format("HH:mm"),
+        },
       };
       works.push(work);
     }
@@ -176,18 +212,56 @@ const CalendarContainer = ({ schedule, auth }: CalendarContainerProps) => {
   };
 
   useEffect(() => {
-    setSelectedStaffId(schedule?.staffs?.[0]?.id);
-    generateStaffBasedCalendar();
-  }, [schedule]);
-
-  useEffect(() => {
     generateStaffBasedCalendar();
   }, [selectedStaffId]);
 
   const RenderEventContent = ({ eventInfo }: any) => {
     return (
-      <div className="event-content">
+      <div
+        className="event-content"
+        onClick={() => {
+          setSelectedEvent(eventInfo.event);
+          setShowEventModal(true);
+        }}
+      >
         <p>{eventInfo.event.title}</p>
+      </div>
+    );
+  };
+
+  const EventModal = () => {
+    if (!showEventModal || !selectedEvent) return null;
+
+    return (
+      <div
+        className="event-modal-overlay"
+        onClick={() => setShowEventModal(false)}
+      >
+        <div className="event-modal" onClick={(e) => e.stopPropagation()}>
+          <h3>{selectedEvent.title}</h3>
+          <div className="event-details">
+            <p>
+              <strong>Personel:</strong>{" "}
+              {selectedEvent.extendedProps.staff?.name}
+            </p>
+            <p>
+              <strong>Vardiya:</strong>{" "}
+              {selectedEvent.extendedProps.shift?.name}
+            </p>
+            <p>
+              <strong>Tarih:</strong>{" "}
+              {dayjs(selectedEvent.date).format("DD.MM.YYYY")}
+            </p>
+            <p>
+              <strong>Başlangıç:</strong>{" "}
+              {selectedEvent.extendedProps.startTime}
+            </p>
+            <p>
+              <strong>Bitiş:</strong> {selectedEvent.extendedProps.endTime}
+            </p>
+          </div>
+          <button onClick={() => setShowEventModal(false)}>Kapat</button>
+        </div>
       </div>
     );
   };
@@ -217,6 +291,7 @@ const CalendarContainer = ({ schedule, auth }: CalendarContainerProps) => {
           ))}
         </div>
         <FullCalendar
+          key={calendarKey}
           ref={calendarRef}
           locale={auth.language}
           plugins={getPlugins()}
@@ -227,7 +302,7 @@ const CalendarContainer = ({ schedule, auth }: CalendarContainerProps) => {
           eventOverlap={true}
           eventDurationEditable={false}
           initialView="dayGridMonth"
-          initialDate={initialDate}
+          initialDate={getFirstEventDate()}
           events={events}
           firstDay={1}
           dayMaxEventRows={4}
@@ -236,6 +311,13 @@ const CalendarContainer = ({ schedule, auth }: CalendarContainerProps) => {
           eventContent={(eventInfo: any) => (
             <RenderEventContent eventInfo={eventInfo} />
           )}
+          viewDidMount={(info) => {
+            if (initialLoadRef.current && schedule?.assignments?.length > 0) {
+              const firstEventDate = getFirstEventDate();
+              info.view.calendar.gotoDate(firstEventDate);
+              initialLoadRef.current = false;
+            }
+          }}
           datesSet={(info: any) => {
             const prevButton = document.querySelector(
               ".fc-prev-button"
@@ -243,14 +325,6 @@ const CalendarContainer = ({ schedule, auth }: CalendarContainerProps) => {
             const nextButton = document.querySelector(
               ".fc-next-button"
             ) as HTMLButtonElement;
-
-            if (
-              calendarRef?.current?.getApi().getDate() &&
-              !dayjs(schedule?.scheduleStartDate).isSame(
-                calendarRef?.current?.getApi().getDate()
-              )
-            )
-              setInitialDate(calendarRef?.current?.getApi().getDate());
 
             const startDiff = dayjs(info.start)
               .utc()
@@ -288,6 +362,7 @@ const CalendarContainer = ({ schedule, auth }: CalendarContainerProps) => {
           }}
         />
       </div>
+      <EventModal />
     </div>
   );
 };
