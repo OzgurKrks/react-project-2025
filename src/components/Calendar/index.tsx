@@ -295,7 +295,12 @@ const CalendarContainer = ({ schedule, auth }: CalendarContainerProps) => {
           setShowEventModal(true);
         }}
       >
-        <p>{eventInfo.event.title}</p>
+        <p>
+          <i className="event-time">
+            {eventInfo.event.extendedProps.startTime}
+          </i>{" "}
+          {eventInfo.event.title}
+        </p>
       </div>
     );
   };
@@ -309,29 +314,34 @@ const CalendarContainer = ({ schedule, auth }: CalendarContainerProps) => {
         onClick={() => setShowEventModal(false)}
       >
         <div className="event-modal" onClick={(e) => e.stopPropagation()}>
-          <h3>{selectedEvent.title}</h3>
+          <div className="event-modal-header">
+            <h3>{selectedEvent.title}</h3>
+          </div>
           <div className="event-details">
             <p>
-              <strong>Personel:</strong>{" "}
-              {selectedEvent.extendedProps.staff?.name}
+              <strong>Personel:</strong>
+              <span>{selectedEvent.extendedProps.staff?.name}</span>
             </p>
             <p>
-              <strong>Vardiya:</strong>{" "}
-              {selectedEvent.extendedProps.shift?.name}
+              <strong>Vardiya:</strong>
+              <span>{selectedEvent.extendedProps.shift?.name}</span>
             </p>
             <p>
-              <strong>Tarih:</strong>{" "}
-              {dayjs(selectedEvent.date).format("DD.MM.YYYY")}
+              <strong>Tarih:</strong>
+              <span>{dayjs(selectedEvent.date).format("DD.MM.YYYY")}</span>
             </p>
             <p>
-              <strong>Başlangıç:</strong>{" "}
-              {selectedEvent.extendedProps.startTime}
+              <strong>Başlangıç:</strong>
+              <span>{selectedEvent.extendedProps.startTime}</span>
             </p>
             <p>
-              <strong>Bitiş:</strong> {selectedEvent.extendedProps.endTime}
+              <strong>Bitiş:</strong>
+              <span>{selectedEvent.extendedProps.endTime}</span>
             </p>
           </div>
-          <button onClick={() => setShowEventModal(false)}>Kapat</button>
+          <div className="event-modal-footer">
+            <button onClick={() => setShowEventModal(false)}>Kapat</button>
+          </div>
         </div>
       </div>
     );
@@ -526,7 +536,7 @@ const CalendarContainer = ({ schedule, auth }: CalendarContainerProps) => {
 
   return (
     <div className="calendar-section">
-      <div className="calendar-wrapper">
+      <div className="calendar-header">
         <div className="staff-list">
           {schedule?.staffs?.map((staff: any) => (
             <div
@@ -548,12 +558,17 @@ const CalendarContainer = ({ schedule, auth }: CalendarContainerProps) => {
             </div>
           ))}
         </div>
+      </div>
+      <div className="calendar-wrapper">
         <FullCalendar
           key={calendarKey}
           ref={calendarRef}
           locale={auth.language}
           plugins={getPlugins()}
-          contentHeight={400}
+          contentHeight={680}
+          height={680}
+          aspectRatio={1.6}
+          stickyHeaderDates={true}
           handleWindowResize={true}
           selectable={true}
           editable={true}
@@ -563,7 +578,7 @@ const CalendarContainer = ({ schedule, auth }: CalendarContainerProps) => {
           initialDate={getFirstEventDate()}
           events={events}
           firstDay={1}
-          dayMaxEventRows={4}
+          dayMaxEventRows={8}
           fixedWeekCount={true}
           showNonCurrentDates={true}
           eventContent={(eventInfo: any) => (

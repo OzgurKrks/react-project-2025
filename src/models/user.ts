@@ -4,16 +4,13 @@ interface Department {
   name: string;
   role: number;
 }
-export interface UserInstance {
-  id: string;
+export type UserInstance = {
   name: string;
-  phoneNumber: string | null;
   email: string;
-  isVerified: boolean;
-  organizationId: string;
-  organizationPlan: string;
-  departments: Department[];
-  role: any;
-  currentDepartmentId: string;
   language: string;
-}
+  roles: any;
+  profileImage?: string;
+  schedulesCount?: number;
+  assignmentsCount?: number;
+  shiftsCount?: number;
+};
