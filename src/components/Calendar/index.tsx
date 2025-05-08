@@ -682,11 +682,20 @@ const CalendarContainer = ({ schedule, auth }: CalendarContainerProps) => {
           <div className="search-container">
             <input
               type="text"
-              placeholder="Personel ara..."
+              placeholder="Personel arama..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="staff-search-input"
             />
+            {searchTerm && (
+              <button
+                className="clear-search-btn"
+                onClick={() => setSearchTerm("")}
+                title="Aramayı temizle"
+              >
+                ×
+              </button>
+            )}
           </div>
         </div>
         <div className="staff-list">

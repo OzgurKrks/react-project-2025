@@ -1126,26 +1126,68 @@ html, body {
 .search-container {
   display: flex;
   width: 100%;
-  max-width: 300px;
-  margin: 0 auto 8px;
+  max-width: 250px;
+  margin: 0 auto 12px;
+  position: relative;
+  
+  &::before {
+    content: "🔍";
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 12px;
+    z-index: 1;
+    pointer-events: none;
+  }
+  
+  .clear-search-btn {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: #aaa;
+    cursor: pointer;
+    font-size: 18px;
+    line-height: 1;
+    padding: 0;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: all 0.2s;
+    
+    &:hover {
+      color: #666;
+      background-color: #f0f0f0;
+    }
+  }
 }
 
 .staff-search-input {
-  flex: 1;
-  padding: 6px 12px;
+  width: 100%;
+  padding: 9px 32px 9px 34px;
   border: 1px solid #e0e0e0;
   border-radius: 20px;
-  font-size: 13px;
+  font-size: 14px;
   outline: none;
-  transition: all 0.2s;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  background-color: #f8f9fa;
   
   &:focus {
     border-color: #2a86db;
     box-shadow: 0 0 0 3px rgba(42, 134, 219, 0.15);
+    background-color: #fff;
   }
   
   &::placeholder {
     color: #aaa;
+    font-style: italic;
   }
 }
 
@@ -1279,5 +1321,30 @@ html, body {
       border-top: 6px solid white;
       bottom: -6px;
     }
+  }
+}
+
+// Mobile styles
+@media (max-width: 768px) {
+  .search-container {
+    max-width: 100%;
+    padding: 0 5px;
+    
+    &::before {
+      left: 10px;
+      font-size: 12px;
+    }
+    
+    .clear-search-btn {
+      right: 8px;
+      font-size: 16px;
+      width: 16px;
+      height: 16px;
+    }
+  }
+  
+  .staff-search-input {
+    padding: 7px 28px 7px 28px;
+    font-size: 12px;
   }
 }
