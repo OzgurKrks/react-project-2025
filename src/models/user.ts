@@ -1,9 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-interface Department {
-  departmentId: string;
-  name: string;
-  role: number;
-}
+
 export type UserInstance = {
   name: string;
   email: string;
