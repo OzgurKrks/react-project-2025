@@ -37,13 +37,13 @@ function* asyncUpdateAssignment({
 }: Action<{
   assignment: any;
   onSuccess?: (response: any) => void;
-  onError?: (error: any) => void;
+
 }>) {
   yield put(updateProgress());
   try {
    
     
-    const { assignment, onSuccess, onError } = payload || { assignment: null };
+    const { assignment, onSuccess } = payload || { assignment: null };
     
     if (!assignment) {
       throw new Error('Assignment is required');
@@ -55,8 +55,7 @@ function* asyncUpdateAssignment({
     onSuccess && onSuccess(assignment);
   } catch (err) {
     Logger.error(err);
-    const { onError } = payload || {};
-    onError && onError(err);
+    
 
     yield put(actions.updateAssignmentFailed());
   } finally {
